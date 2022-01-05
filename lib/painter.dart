@@ -6,14 +6,15 @@ import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flutter/material.dart' hide Image;
-import 'package:flutter/widgets.dart' hide Image;
 
 /// A very simple widget that supports drawing using touch.
 class Painter extends StatefulWidget {
+  final Function()? onTouchEnd;
+
   final PainterController painterController;
 
   /// Creates an instance of this widget that operates on top of the supplied [PainterController].
-  Painter(PainterController painterController)
+  Painter(PainterController painterController, {this.onTouchEnd})
       : this.painterController = painterController,
         super(key: new ValueKey<PainterController>(painterController));
 
@@ -23,6 +24,7 @@ class Painter extends StatefulWidget {
 
 class _PainterState extends State<Painter> {
   bool _finished = false;
+  Offset? lastTouchPoint;
 
   @override
   void initState() {
@@ -31,9 +33,6 @@ class _PainterState extends State<Painter> {
   }
 
   Size _finish() {
-    setState(() {
-      _finished = true;
-    });
     return context.size ?? const Size(0, 0);
   }
 
@@ -63,6 +62,7 @@ class _PainterState extends State<Painter> {
   void _onPanStart(DragStartDetails start) {
     Offset pos = (context.findRenderObject() as RenderBox)
         .globalToLocal(start.globalPosition);
+    lastTouchPoint = pos;
     widget.painterController._pathHistory.add(pos);
     widget.painterController._notifyListeners();
   }
@@ -70,13 +70,19 @@ class _PainterState extends State<Painter> {
   void _onPanUpdate(DragUpdateDetails update) {
     Offset pos = (context.findRenderObject() as RenderBox)
         .globalToLocal(update.globalPosition);
+    if ((pos - lastTouchPoint!).distance > 50) {
+      return;
+    }
+    lastTouchPoint = pos;
     widget.painterController._pathHistory.updateCurrent(pos);
     widget.painterController._notifyListeners();
   }
 
   void _onPanEnd(DragEndDetails end) {
+    lastTouchPoint = null;
     widget.painterController._pathHistory.endCurrent();
     widget.painterController._notifyListeners();
+    widget.onTouchEnd?.call();
   }
 }
 
@@ -314,6 +320,10 @@ class PainterController extends ChangeNotifier {
       return new PictureDetails(
           recorder.endRecording(), size.width.floor(), size.height.floor());
     }
+  }
+
+  PictureDetails render() {
+    return _render(_widgetFinish!());
   }
 
   /// Returns true if this drawing is finished.
