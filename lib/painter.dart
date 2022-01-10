@@ -70,7 +70,7 @@ class _PainterState extends State<Painter> {
   void _onPanUpdate(DragUpdateDetails update) {
     Offset pos = (context.findRenderObject() as RenderBox)
         .globalToLocal(update.globalPosition);
-    if ((pos - lastTouchPoint!).distance > 50) {
+    if ((pos - lastTouchPoint!).distance > 70) {
       return;
     }
     lastTouchPoint = pos;
